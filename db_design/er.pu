@@ -1,0 +1,166 @@
+@startuml
+title ER図
+skinparam linetype ortho
+skinparam node {
+    BackgroundColor LightBlue
+    BorderColor White
+}
+skinparam frame {
+    BackgroundColor White
+    BorderColor Black
+}
+
+package 基本情報入力レイヤー <<node>> {
+    entity "販売者 / Seller" as Seller {
+        + seller_id : uuid
+        --
+        seller_name : string
+        # position_id
+    }
+
+    entity "役職 / Position" as Position {
+        + position_id : uuid
+        --
+        position_name : string
+    }
+
+    entity "マーケット / Market" as Market {
+        + market_id : uuid
+        --
+        market_name : string
+    }
+
+    entity "販売媒体 / Medium" as Medium {
+        + medium_id : uuid
+        --
+        medium_name : string
+    }
+
+    entity "商品 / Item" as Item {
+        + item_id : uuid
+        --
+        item_name : string
+        # medium_id : uuid
+        price : int
+        # market_id : uuid
+        # seller_id : uuid
+        sales_start_month : date
+    }
+}
+
+package 実績情報入力レイヤー <<node>> {
+    entity "月 / Month" as Month {
+        + month_id : uuid
+        --
+        month : date
+    }
+
+    entity "月次売上個数 / MonthSalesQuantity" as MonthSalesQuantity {
+        + month_sales_quantity_id : uuid
+        --
+        # month_id : uuid
+        # item_id : uuid
+        sales_quantity : int
+    }
+
+    entity "月次マーケット手数料 / MonthMarketCommission" as MonthMarketCommission {
+        + month_market_commission_id : uuid
+        --
+        # month_id : uuid
+        # market_id : uuid
+        commission : int
+    }
+}
+
+' 以下はInput Layerを基に計算して自動生成される派生テーブル
+package 売上・報酬計算レイヤー <<node>> {
+    entity "月次サマリ / MonthSummary" as MonthSummary {
+        + month_summary_id : uuid
+        --
+        # month_id : uuid
+
+    }
+    package 売上関連 <<frame>> {
+        entity "月次商品売上 / ItemMonthSales" as ItemMonthSales {
+            + item_month_sales_id : uuid
+            --
+            # month_summary_id : uuid
+            # month_sales_quantity_id : uuid
+            total_sales : int
+        }
+
+        entity "月次マーケット売上 / TotalMarketSales" as TotalMarketSales {
+            + total_market_sales_id : uuid
+            --
+            # month_summary_id : uuid
+            # market_id : uuid
+            total_market_sales : int
+        }
+
+        entity "月次販売者マーケット売上 / SellerMarketSales" as SellerMarketSales {
+            + seller_market_sales_id : uuid
+            --
+            # month_summary_id : uuid
+            # seller_id : uuid
+            # market_id : uuid
+            seller_total_sales : int
+        }
+    }
+
+    package 報酬関連 <<frame>> {
+        entity "月次マーケット振込金額 / MarketTransferAmount" as MarketTransferAmount {
+            + market_transfer_amount_id : uuid
+            --
+            # month_summary_id : uuid
+            # total_market_sales_id : uuid
+            # month_market_commission_id
+            transfer_amount : int
+        }
+
+        entity "月次販売者マーケット報酬 / SellerMarketReward" as SellerMarketReward {
+            + seller_market_reward_id : uuid
+            --
+            # month_summary_id : uuid
+            # seller_market_sales_id
+            reward_amount : int
+            reward_ratio : float
+        }
+
+        entity "総報酬 / Reward" as Reward {
+            + reward_id : uuid
+            --
+            # month_summary_id : uuid
+            # seller_id : uuid
+            reward_amount : int
+        }
+    }
+
+}
+
+' エンティティ間の関係を定義
+Position ||--o{ Seller
+Seller ||--o{ Item
+Medium ||--o{ Item
+Market ||--o{ Item
+Item ||--o{ MonthSalesQuantity
+MonthSalesQuantity ||--o| ItemMonthSales
+Market ||--o{ MonthMarketCommission
+Market ||--o{ TotalMarketSales
+MonthMarketCommission ||--o| MarketTransferAmount
+TotalMarketSales ||--o| MarketTransferAmount
+Seller ||--o{ SellerMarketSales
+Market ||--o{ SellerMarketSales
+Seller ||--o{ Reward
+SellerMarketSales ||--o| SellerMarketReward
+Month ||--o{ MonthSalesQuantity
+Month ||--o{ MonthMarketCommission
+Month ||--o| MonthSummary
+MonthSummary ||--o{ ItemMonthSales
+MonthSummary ||--o{ TotalMarketSales
+MonthSummary ||--o{ MarketTransferAmount
+MonthSummary ||--o{ SellerMarketSales
+MonthSummary ||--o{ SellerMarketReward
+MonthSummary ||--o{ Reward
+
+' left to right direction
+@enduml
